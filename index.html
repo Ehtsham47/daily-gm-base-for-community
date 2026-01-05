@@ -10,27 +10,52 @@
       --card-bg: #0b1d46;
       --muted: rgba(255,255,255,0.85);
     }
-    html,body { height:100%; margin:0; font-family:Inter,Arial,sans-serif; background:linear-gradient(180deg,#0039d6 0%, #002b8f 100%); color:#fff; }
-    .wrap { min-height:100%; display:flex; align-items:center; justify-content:center; padding:30px; }
-    .card { width:380px; background:var(--card-bg); border-radius:14px; padding:22px; box-shadow:0 18px 40px rgba(0,0,0,0.45); text-align:center; }
-    .logo { width:58px; display:block; margin: 0 auto 6px; }
-    h1 { margin:6px 0 4px; font-size:20px; letter-spacing:0.2px; }
-    p.desc { margin:0 0 12px; color:var(--muted); font-size:13px; }
+    html,body {
+      height:100%; margin:0;
+      font-family: Inter, Arial, sans-serif;
+      background: linear-gradient(180deg,#0039d6 0%, #002b8f 100%);
+      color:#fff;
+    }
+    .wrap {
+      min-height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .card {
+      width:380px;
+      background:var(--card-bg);
+      border-radius:14px;
+      padding:22px;
+      box-shadow:0 18px 40px rgba(0,0,0,.45);
+      text-align:center;
+    }
+    .logo { width:58px; margin:0 auto 6px; display:block; }
+    h1 { margin:6px 0 4px; font-size:20px; }
+    p.desc { margin:0 0 12px; font-size:13px; color:var(--muted); }
     .row { display:flex; gap:10px; margin-top:12px; }
-    button { border:0; border-radius:10px; padding:12px 14px; font-weight:600; cursor:pointer; }
+    button {
+      border:0; border-radius:10px;
+      padding:12px 14px;
+      font-weight:600; cursor:pointer;
+    }
     .connect { background:#fff; color:var(--base-blue); flex:1; }
     .gm { background:var(--base-blue); color:#fff; flex:1; }
-    .gm[disabled] { opacity:0.55; cursor:not-allowed; }
-    .info { margin-top:12px; font-size:13px; color:var(--muted); word-break:break-all; }
+    .gm[disabled] { opacity:.55; cursor:not-allowed; }
+    .info { margin-top:10px; font-size:13px; color:var(--muted); word-break:break-all; }
     .big { font-size:16px; font-weight:700; color:#fff; }
     .small { font-size:12px; color:var(--muted); margin-top:6px; }
     .link { color:#bfe0ff; text-decoration:none; }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <div class="card">
+      <!-- Put base-logo.png in repo root -->
       <img src="./base-logo.png" alt="Base" class="logo" />
+
       <h1>Daily GM</h1>
       <p class="desc">One GM per address per UTC day — public on Base</p>
 
@@ -42,28 +67,28 @@
       <div id="status" class="info small">Not connected</div>
       <div id="wallet" class="info small"></div>
 
-      <div id="gmInfo" class="info">
+      <div class="info">
         <div class="big" id="gmCount">GM Count: -</div>
         <div class="small" id="gmLast">Last GM: -</div>
         <div class="small" id="utcTimer">Next reset (UTC): -</div>
       </div>
 
-      <div class="info small" style="margin-top:8px;">
-        <a id="txLink" class="link" href="#" target="_blank" style="display:none">View last transaction</a>
+      <div class="info small">
+        <a id="txLink" class="link" href="#" target="_blank" style="display:none">View tx on BaseScan</a>
       </div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
   <script>
-    // ---------- CONFIG ----------
-    const CONTRACT_ADDRESS = "0xB4E00697Fd3e62a95Bfb9fddd0832E07B48eAcb6"; // <<< REPLACE THIS with your contract address (keep quotes)
+    // ================= CONFIG =================
+    const CONTRACT_ADDRESS = "0xB4E00697Fd3e62a95Bfb9fddd0832E07B48eAcb6"; // <<< CHANGE THIS
     const ABI = [
       "function sendGM() external",
       "function gmCount(address) view returns (uint256)",
       "function lastGmDay(address) view returns (uint256)"
     ];
-    // ----------------------------
+    // =========================================
 
     const connectBtn = document.getElementById('connectBtn');
     const gmBtn = document.getElementById('gmBtn');
@@ -79,14 +104,17 @@
     connectBtn.onclick = connectWallet;
     gmBtn.onclick = sendGM;
 
+    // UTC helpers
     function utcDayNow() {
-      return Math.floor(Date.now() / 86400000); // days since epoch (UTC)
+      return Math.floor(Date.now() / 86400000); // number
     }
     function timeUntilNextUtc() {
       const now = Date.now();
       const nextUtc = (Math.floor(now / 86400000) + 1) * 86400000;
       const ms = nextUtc - now;
-      const s = Math.floor(ms/1000)%60, m=Math.floor(ms/60000)%60, h=Math.floor(ms/3600000);
+      const s = Math.floor(ms/1000)%60;
+      const m = Math.floor(ms/60000)%60;
+      const h = Math.floor(ms/3600000);
       return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
     }
 
@@ -97,95 +125,75 @@
         await provider.send("eth_requestAccounts", []);
         signer = await provider.getSigner();
         user = await signer.getAddress();
-        // instantiate contract
         contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
-        walletDiv.innerText = 'Connected: ' + user.slice(0,6) + '...' + user.slice(-4);
+        walletDiv.innerText = `Connected: ${user.slice(0,6)}...${user.slice(-4)}`;
         statusDiv.innerText = 'Connected to Base';
 
-        gmBtn.disabled = true; // will enable after fetch
         await refreshStatus();
-        // start timer
         setInterval(() => {
           utcTimerDiv.innerText = 'Next reset (UTC) in: ' + timeUntilNextUtc();
         }, 1000);
-
-      } catch(e) {
-        console.error(e);
-        statusDiv.innerText = 'Connect failed: ' + (e && e.message ? e.message : e);
+      } catch (e) {
+        statusDiv.innerText = 'Connect failed: ' + (e?.message || e);
       }
     }
 
     async function refreshStatus() {
-      try {
-        if (!contract || !user) return;
-        const count = await contract.gmCount(user);
-        const lastDay = await contract.lastGmDay(user);
-        gmCountDiv.innerText = 'GM Count: ' + count.toString();
+      if (!contract || !user) return;
 
-        if (+lastDay === 0) {
-          gmLastDiv.innerText = 'Last GM: Not yet';
-        } else {
-          // display day number + human date (UTC)
-          const dayNum = Number(lastDay);
-          const date = new Date(dayNum * 86400000);
-          gmLastDiv.innerText = 'Last GM (UTC day): ' + dayNum + ' — ' + date.toUTCString().split(' ')[0] + ' ' + date.toISOString().slice(0,10);
-        }
+      // ethers v6 returns BigInt
+      const count = await contract.gmCount(user);       // BigInt
+      const lastDay = await contract.lastGmDay(user);   // BigInt
 
-        // can send if lastGmDay < today
-        const today = utcDayNow();
-        const already = Number(lastDay) >= today;
-        if (already) {
-          gmBtn.disabled = true;
-          gmBtn.innerText = 'GM Sent Today ✓';
-          statusDiv.innerText = 'You already sent GM today';
-        } else {
-          gmBtn.disabled = false;
-          gmBtn.innerText = 'Send GM ☀️';
-          statusDiv.innerText = 'Ready to send GM';
-        }
+      gmCountDiv.innerText = 'GM Count: ' + count.toString();
 
-        utcTimerDiv.innerText = 'Next reset (UTC) in: ' + timeUntilNextUtc();
-      } catch (err) {
-        console.error(err);
-        statusDiv.innerText = 'Error reading contract: ' + (err.message || err);
+      if (lastDay === 0n) {
+        gmLastDiv.innerText = 'Last GM: Not yet';
+      } else {
+        const dayNum = Number(lastDay.toString()); // safe
+        const date = new Date(dayNum * 86400000);
+        gmLastDiv.innerText = 'Last GM (UTC): ' + date.toISOString().slice(0,10);
       }
+
+      const today = BigInt(utcDayNow());
+      const already = lastDay >= today;
+
+      if (already) {
+        gmBtn.disabled = true;
+        gmBtn.innerText = 'GM Sent Today ✓';
+        statusDiv.innerText = 'You already sent GM today';
+      } else {
+        gmBtn.disabled = false;
+        gmBtn.innerText = 'Send GM ☀️';
+        statusDiv.innerText = 'Ready to send GM';
+      }
+
+      utcTimerDiv.innerText = 'Next reset (UTC) in: ' + timeUntilNextUtc();
     }
 
     async function sendGM() {
       try {
-        if (!contract || !signer) { alert('Connect wallet first'); return; }
+        if (!contract) { alert('Connect wallet first'); return; }
         gmBtn.disabled = true;
         gmBtn.innerText = 'Sending...';
 
         const tx = await contract.sendGM();
-        statusDiv.innerText = 'TX sent — waiting confirmation';
+        statusDiv.innerText = 'TX sent — confirming…';
         const receipt = await tx.wait();
-        // show last tx on BaseScan
+
         const txhash = receipt.transactionHash || tx.hash;
         txLink.href = `https://basescan.org/tx/${txhash}`;
         txLink.style.display = 'inline';
         txLink.innerText = 'View tx on BaseScan';
 
         await refreshStatus();
-      } catch(e) {
-        console.error(e);
-        const msg = (e && e.error && e.error.message) ? e.error.message : (e && e.message) ? e.message : e;
-        statusDiv.innerText = 'Send failed: ' + msg;
+      } catch (e) {
+        statusDiv.innerText = 'Send failed: ' + (e?.message || e);
         gmBtn.disabled = false;
         gmBtn.innerText = 'Send GM ☀️';
       }
     }
-
-    // auto-update tiny UI if connected
-    setInterval(async () => {
-      if (contract && user) {
-        // refresh only countdown and if day changed refresh status
-        utcTimerDiv.innerText = 'Next reset (UTC) in: ' + timeUntilNextUtc();
-        // check if lastGmDay changed (rare)
-      }
-    }, 1000);
-
   </script>
 </body>
 </html>
