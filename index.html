@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Daily GM on Base</title>
+
+  <!-- Meta -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Base blue theme -->
+  <style>
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      background: #0052ff;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .card {
+      background: #0b1d46;
+      border-radius: 16px;
+      padding: 28px;
+      width: 360px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+    }
+
+    .logo {
+      width: 56px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 8px 0 4px;
+      font-size: 22px;
+    }
+
+    p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 14px;
+      border-radius: 12px;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .connect {
+      background: white;
+      color: #0052ff;
+    }
+
+    .gm {
+      background: #0052ff;
+      color: white;
+    }
+
+    .info {
+      margin-top: 12px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+
+    <!-- Base Logo -->
+    <img
+      src="https://base.org/brand/base-mark-in-blue.svg"
+      alt="Base Logo"
+      class="logo"
+    />
+
+    <h1>Daily GM</h1>
+    <p>On Base Network</p>
+
+    <button class="connect" onclick="connectWallet()">Connect Wallet</button>
+    <button class="gm" onclick="sendGM()">Send GM ☀️</button>
+
+    <div class="info" id="status">Not connected</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
+
+  <script>
+    let provider;
+    let signer;
+    let contract;
+
+    const CONTRACT_ADDRESS = "0xb4e00697fd3e62a95bfb9fddd0832e07b48eacb6";
+    const ABI = [
+      "function sendGM() external",
+      "function gmCount(address) view returns (uint256)"
+    ];
+
+    async function connectWallet() {
+      if (!window.ethereum) {
+        alert("MetaMask not found");
+        return;
+      }
+
+      provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = await provider.getSigner();
+
+      contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+      const address = await signer.getAddress();
+      const count = await contract.gmCount(address);
+
+      document.getElementById("status").innerText =
+        "GM Count: " + count.toString();
+    }
+
+    async function sendGM() {
+      if (!contract) {
+        alert("Connect wallet first");
+        return;
+      }
+
+      const tx = await contract.sendGM();
+      document.getElementById("status").innerText = "Sending GM...";
+      await tx.wait();
+
+      const address = await signer.getAddress();
+      const count = await contract.gmCount(address);
+      document.getElementById("status").innerText =
+        "GM Count: " + count.toString();
+    }
+  </script>
+</body>
+</html>
