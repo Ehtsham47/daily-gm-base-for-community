@@ -3,11 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <title>Daily GM on Base</title>
-
-  <!-- Meta -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Base blue theme -->
   <style>
     body {
       margin: 0;
@@ -26,28 +23,17 @@
       padding: 28px;
       width: 360px;
       text-align: center;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.35);
     }
 
-    .logo {
+    img {
       width: 56px;
-      margin-bottom: 8px;
-    }
-
-    h1 {
-      margin: 8px 0 4px;
-      font-size: 22px;
-    }
-
-    p {
-      font-size: 14px;
-      opacity: 0.9;
+      margin-bottom: 10px;
     }
 
     button {
       width: 100%;
       padding: 14px;
-      margin-top: 14px;
+      margin-top: 12px;
       border-radius: 12px;
       border: none;
       font-size: 16px;
@@ -65,6 +51,11 @@
       color: white;
     }
 
+    .gm:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     .info {
       margin-top: 12px;
       font-size: 14px;
@@ -74,35 +65,37 @@
 
 <body>
   <div class="card">
+    <img src="./base-logo.png" alt="Base Logo" />
 
-    <!-- Base Logo -->
-    <img
-      src="https://base.org/brand/base-mark-in-blue.svg"
-      alt="Base Logo"
-      class="logo"
-    />
-
-    <h1>Daily GM</h1>
+    <h2>Daily GM</h2>
     <p>On Base Network</p>
 
-    <button class="connect" onclick="connectWallet()">Connect Wallet</button>
-    <button class="gm" onclick="sendGM()">Send GM ☀️</button>
+    <button id="connectBtn" class="connect">Connect Wallet</button>
+    <button id="gmBtn" class="gm" disabled>Send GM ☀️</button>
 
-    <div class="info" id="status">Not connected</div>
+    <div class="info" id="wallet">Not connected</div>
+    <div class="info" id="gmCount">GM Count: -</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
 
   <script>
-    let provider;
-    let signer;
-    let contract;
+    const CONTRACT_ADDRESS = "0xB4E00697Fd3e62a95Bfb9fddd0832E07B48eAcb6";
 
-    const CONTRACT_ADDRESS = "0xb4e00697fd3e62a95bfb9fddd0832e07b48eacb6";
     const ABI = [
       "function sendGM() external",
       "function gmCount(address) view returns (uint256)"
     ];
+
+    let provider, signer, contract, userAddress;
+
+    const connectBtn = document.getElementById("connectBtn");
+    const gmBtn = document.getElementById("gmBtn");
+    const walletDiv = document.getElementById("wallet");
+    const gmCountDiv = document.getElementById("gmCount");
+
+    connectBtn.onclick = connectWallet;
+    gmBtn.onclick = sendGM;
 
     async function connectWallet() {
       if (!window.ethereum) {
@@ -113,30 +106,34 @@
       provider = new ethers.BrowserProvider(window.ethereum);
       await provider.send("eth_requestAccounts", []);
       signer = await provider.getSigner();
+      userAddress = await signer.getAddress();
 
       contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
-      const address = await signer.getAddress();
-      const count = await contract.gmCount(address);
+      walletDiv.innerText =
+        "Connected: " + userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
 
-      document.getElementById("status").innerText =
-        "GM Count: " + count.toString();
+      gmBtn.disabled = false;
+
+      updateGMCount();
+    }
+
+    async function updateGMCount() {
+      const count = await contract.gmCount(userAddress);
+      gmCountDiv.innerText = "GM Count: " + count.toString();
     }
 
     async function sendGM() {
-      if (!contract) {
-        alert("Connect wallet first");
-        return;
-      }
+      gmBtn.disabled = true;
+      gmBtn.innerText = "Sending GM...";
 
       const tx = await contract.sendGM();
-      document.getElementById("status").innerText = "Sending GM...";
       await tx.wait();
 
-      const address = await signer.getAddress();
-      const count = await contract.gmCount(address);
-      document.getElementById("status").innerText =
-        "GM Count: " + count.toString();
+      await updateGMCount();
+
+      gmBtn.innerText = "Send GM ☀️";
+      gmBtn.disabled = false;
     }
   </script>
 </body>
